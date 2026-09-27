@@ -26,6 +26,24 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
+      # actions/configure-pages reads the Pages site record and fails with
+      # "Get Pages site failed" (404) when that record does not exist yet.
+      # Choosing "GitHub Actions" as the build source in the repo settings sets
+      # the Pages flag but does not create the site, so it is created here.
+      # This is idempotent: the API returns 422 if the site already exists.
+      - name: Enable GitHub Pages
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          if gh api "repos/${REPO}/pages" >/dev/null 2>&1; then
+            echo "Pages site already exists, nothing to create."
+          else
+            echo "No Pages site found. Creating one with build type 'workflow'."
+            gh api --method POST "repos/${REPO}/pages" -f build_type=workflow
+            echo "Pages site created."
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
 
